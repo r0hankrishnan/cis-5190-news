@@ -1,4 +1,6 @@
 import csv
+import random
+import time
 from pathlib import Path
 from urllib.parse import urldefrag, urlparse
 
@@ -10,13 +12,38 @@ from urllib3.util.retry import Retry
 
 DATA_DIR = Path(__file__).resolve().parent.parent / "data" / "external"
 URL_CSV = DATA_DIR / "url_only_data.csv"
+OUTPUT_CSV = Path(__file__).resolve().parent.parent / "data" / "raw" / "nbc_scraped_all.csv"
+MIN_REQUEST_DELAY_SECONDS = 0.8
+MAX_REQUEST_DELAY_SECONDS = 1.8
 
 
 def http_session() -> requests.Session:
     session = requests.Session()
-    retries = Retry(total=5, backoff_factor=0.5, status_forcelist=[429, 500, 502, 503, 504])
+    retries = Retry(
+        total=7,
+        connect=5,
+        read=5,
+        backoff_factor=1.0,
+        status_forcelist=[429, 500, 502, 503, 504],
+        allowed_methods=frozenset(["GET", "HEAD"]),
+        respect_retry_after_header=True,
+        raise_on_status=False,
+    )
     session.mount("https://", HTTPAdapter(max_retries=retries))
     session.mount("http://", HTTPAdapter(max_retries=retries))
+    # Mimic a regular browser to reduce anti-bot blocking.
+    session.headers.update(
+        {
+            "User-Agent": (
+                "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) "
+                "AppleWebKit/537.36 (KHTML, like Gecko) "
+                "Chrome/124.0.0.0 Safari/537.36"
+            ),
+            "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+            "Accept-Language": "en-US,en;q=0.9",
+            "Connection": "keep-alive",
+        }
+    )
     return session
 
 
@@ -35,6 +62,14 @@ def is_live_blog_url(url: str) -> bool:
     """Rolling live coverage: many updates on one page — poor fit for single-article ML labels."""
     path = urlparse(url).path.lower()
     return "/live-blog/" in path
+
+
+def parse_topic_from_url(url: str) -> str | None:
+    path = urlparse(url).path.strip("/")
+    if not path:
+        return None
+    topic = path.split("/", 1)[0].strip().lower()
+    return topic or None
 
 
 def parse_title(soup: BeautifulSoup) -> str | None:
@@ -97,22 +132,39 @@ def _print_article_block(
 
 if __name__ == "__main__":
     session = http_session()
-    rows: list[dict[str, str | bool | None]] = []
+    rows: list[dict[str, str | None]] = []
     for raw_url in load_nbc_urls():
+        time.sleep(random.uniform(MIN_REQUEST_DELAY_SECONDS, MAX_REQUEST_DELAY_SECONDS))
         url = normalized_url(raw_url)
         is_live = is_live_blog_url(url)
-        response = session.get(url, timeout=30)
+        topic = parse_topic_from_url(url)
+        try:
+            response = session.get(url, timeout=(10, 45))
+        except requests.exceptions.RequestException as exc:
+            print(f"\n{'-' * 70}\nSKIP (REQUEST ERROR)\n  {url}\n  {exc}\n{'-' * 70}")
+            rows.append(
+                {
+                    "url": url,
+                    "topic": topic,
+                    "title": None,
+                    "subtitle": None,
+                    "author": None,
+                    "datetime_posted": None,
+                    "label": "NBC News",
+                }
+            )
+            continue
         if response.status_code != 200:
             print(f"\n{'-' * 70}\nSKIP (HTTP {response.status_code})\n  {url}\n{'-' * 70}")
             rows.append(
                 {
-                    "URL": url,
-                    "Is Live Blog": is_live,
-                    "Title": None,
-                    "Author": None,
-                    "Publish Time": None,
-                    "Description": None,
-                    "First Paragraph": None,
+                    "url": url,
+                    "topic": topic,
+                    "title": None,
+                    "subtitle": None,
+                    "author": None,
+                    "datetime_posted": None,
+                    "label": "NBC News",
                 }
             )
             continue
@@ -127,26 +179,29 @@ if __name__ == "__main__":
         )
         rows.append(
             {
-                "URL": url,
-                "Is Live Blog": is_live,
-                "Title": title,
-                "Author": author,
-                "Publish Time": publish_time,
-                "Description": description,
-                "First Paragraph": first_paragraph,
+                "url": url,
+                "topic": topic,
+                "title": title,
+                "subtitle": description,
+                "author": author,
+                "datetime_posted": publish_time,
+                "label": "NBC News",
             }
         )
 
     df = pd.DataFrame(
         rows,
         columns=[
-            "URL",
-            "Is Live Blog",
-            "Title",
-            "Author",
-            "Publish Time",
-            "Description",
-            "First Paragraph",
+            "url",
+            "topic",
+            "title",
+            "subtitle",
+            "author",
+            "datetime_posted",
+            "label",
         ],
     )
+    OUTPUT_CSV.parent.mkdir(parents=True, exist_ok=True)
+    df.to_csv(OUTPUT_CSV, index=False)
+    print(f"\nSaved {len(df)} rows to {OUTPUT_CSV}")
     print(df.head())
