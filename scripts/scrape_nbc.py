@@ -1,3 +1,7 @@
+"""This script scrapes articles from NBC News based on a list of URLs provided in a CSV file. 
+It uses requests and BeautifulSoup to fetch and parse each article page, extracting the title, author, publish time, and description. 
+The script includes error handling for request failures and non-200 HTTP responses, logging any issues encountered.
+"""
 import csv
 import random
 import time
