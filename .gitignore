@@ -211,3 +211,4 @@ __marimo__/
 /_notebooks
 /_notebooks
 *.html
+*.pt
