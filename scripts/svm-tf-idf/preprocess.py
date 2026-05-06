@@ -1,9 +1,3 @@
-"""Build (X, y) from the grader's CSV.
-
-The CSV may contain `url` and/or `headline` and may or may not have an
-explicit label column. We try, in order, to find a headline column for X
-and a label column (or fall back to inferring labels from the URL host).
-"""
 from __future__ import annotations
 
 from urllib.parse import urlparse

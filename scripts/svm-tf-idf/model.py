@@ -1,8 +1,3 @@
-"""News Headline Classifier (FOX vs NBC).
-
-Loads a pickled scikit-learn pipeline from model.pt and exposes a
-NewsClassifier whose predict(batch) returns 0 (FOX) or 1 (NBC).
-"""
 from __future__ import annotations
 
 import html
@@ -19,9 +14,6 @@ import torch
 from scipy import sparse
 from sklearn.base import BaseEstimator, TransformerMixin
 
-# The grader may import this file under a synthetic module name (not "model").
-# The pickled pipeline records its custom transformers as `model._ColumnPicker`
-# / `model.StyleFeatures`, so we register this module under that name too.
 sys.modules.setdefault("model", sys.modules[__name__])
 
 ROOT = Path(__file__).resolve().parent
@@ -32,7 +24,6 @@ QUOTE_CHARS = '"\u2018\u2019\u201c\u201d'
 
 
 def normalize_raw(text):
-    """Light cleaning that preserves casing and punctuation."""
     if text is None or (isinstance(text, float) and np.isnan(text)):
         return ""
     s = unicodedata.normalize("NFKC", html.unescape(str(text)))
@@ -40,7 +31,6 @@ def normalize_raw(text):
 
 
 def clean_strict(text):
-    """Lowercase, alphanumeric-only cleaning for the word TF-IDF branch."""
     if text is None or (isinstance(text, float) and np.isnan(text)):
         return ""
     s = unicodedata.normalize("NFKC", html.unescape(str(text))).lower()
@@ -64,7 +54,6 @@ def url_to_text(url):
 
 
 class _ColumnPicker(BaseEstimator, TransformerMixin):
-    """Returns the named column of a DataFrame as a 1-D array."""
 
     def __init__(self, column):
         self.column = column
@@ -77,8 +66,6 @@ class _ColumnPicker(BaseEstimator, TransformerMixin):
 
 
 class StyleFeatures(BaseEstimator, TransformerMixin):
-    """Numeric style features per headline (length, casing, punctuation)."""
-
     feature_names = [
         "len_chars", "n_words", "mean_word_len",
         "caps_word_ratio", "allcaps_word_ratio",
@@ -115,8 +102,6 @@ class StyleFeatures(BaseEstimator, TransformerMixin):
 
 
 def _to_input_frame(batch):
-    """Turn an iterable of strings (or URLs) into the 2-column DataFrame
-    that the feature pipeline expects: `text` (raw) and `text_clean`."""
     raw = []
     for item in batch:
         s = "" if item is None else str(item)
