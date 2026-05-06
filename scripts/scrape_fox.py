@@ -1,3 +1,8 @@
+"""This script scrapes articles from Fox News based on a list of URLs provided in a CSV file. 
+It uses concurrent threads to speed up the scraping process while respecting polite scraping practices (random delays, user-agent headers, and retry logic). 
+The scraped data is saved to a new CSV file, and any failed URLs are logged separately for later review and retrying.
+The script is designed to be robust against common issues like connection errors and non-200 HTTP responses, with exponential backoff retries.
+"""
 import csv
 import logging
 import random
