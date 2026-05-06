@@ -1,3 +1,8 @@
+"""This script reads a CSV file containing URLs of news articles, identifies which URLs belong to Fox News and which belong to NBC News, 
+and then splits the data into two separate CSV files: one for Fox News URLs and another for NBC News URLs. 
+This allows us to easily manage and analyze the two datasets separately in subsequent steps of our project.
+"""
+
 import pandas as pd
 from pathlib import Path
 

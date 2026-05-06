@@ -1,3 +1,8 @@
+"""This script combines all the scraped CSV files from the "fox_scraped" directory into a single CSV file for easier analysis. 
+It reads each individual CSV, concatenates them into one DataFrame, and saves the combined DataFrame as "fox_scraped_all.csv".
+The original scraper produced some failed files that needed to be retried, so this script allows us to easily manage and combine the successful scrapes without manual copying and pasting.
+"""
+
 import pandas as pd
 from pathlib import Path
 
