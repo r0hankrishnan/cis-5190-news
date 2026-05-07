@@ -212,3 +212,4 @@ __marimo__/
 *.html
 # *.pt
 .vscode/settings.json
+scripts/distilbert/model.pt
